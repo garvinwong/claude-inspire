@@ -312,7 +312,7 @@ object Suggest {
         "/permissions", "/mcp", "/hooks", "/tasks", "/workflows", "/diff", "/export", "/skills", "/help")
 }
 
-/** 选择题作答 → 桥的结构化答案（题目 → 回答；多选用逗号连，与灵动岛一致）。 */
+/** 选择题作答 → 桥的结构化答案（题目 → 回答；多选用逗号连，与 Agents Island 一致）。 */
 fun answersJson(questions: List<Question>, picked: List<Set<String>>, other: List<String>): JSONObject {
     val o = JSONObject()
     questions.forEachIndexed { i, q ->

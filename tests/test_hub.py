@@ -1,4 +1,4 @@
-"""会话中枢测试：假灵动岛桥 + 真宿主（跑假会话）+ 临时账号目录，绝不碰真实 ~/.palm 与桥。"""
+"""会话中枢测试：假Agents Island 桥 + 真宿主（跑假会话）+ 临时账号目录，绝不碰真实 ~/.palm 与桥。"""
 import base64
 import json
 import os
@@ -468,7 +468,7 @@ def test_usage_window_past_reset_shows_reset_not_stale_pct(env, tmp_path, monkey
 
 
 def test_yolo_toggles_bridge_and_rows_carry_flag(env):
-    """长按会话卡“YOLO 模式”：沿用灵动岛桥的会话级 YOLO（工具审批秒放行，选择题 / 计划照常问），
+    """长按会话卡“YOLO 模式”：沿用Agents Island 桥的会话级 YOLO（工具审批秒放行，选择题 / 计划照常问），
     手机与桌面岛同一个开关；会话行带 yolo 标记。"""
     _, r = call(env['base'], '/api/yolo', env['tok'], {'sid': 'sid-host', 'on': True})
     assert r['ok']

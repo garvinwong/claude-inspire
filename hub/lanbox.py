@@ -66,6 +66,8 @@ class Guard:
         """返回 (http 码, 设备名, 角色)。"""
         now = self.clock()
         with self.lock:
+            if len(self.fails) > 1024:                       # 计错表只留还在锁定期内的，防止被刷大
+                self.fails = {k: v for k, v in self.fails.items() if v[1] and now < v[1]}
             n, until = self.fails.get(ip, (0, 0))
             if until and now < until:
                 return 429, None, None
@@ -249,7 +251,8 @@ def make_handler(guard, mailbox, audit=None):
     audit = audit or (lambda ip, dev, ep, result: None)
 
     class Handler(BaseHTTPRequestHandler):
-        server_version = 'mailbox'
+        server_version = 'lanbox'
+        timeout = 60                           # 慢连接（只连不发）最多占一个线程 60 秒；长连接取件上限 25 秒
         sys_version = ''
         protocol_version = 'HTTP/1.1'
 

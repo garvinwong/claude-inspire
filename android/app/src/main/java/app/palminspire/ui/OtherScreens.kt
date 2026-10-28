@@ -181,7 +181,7 @@ fun NewSessionScreen(vm: AppState) {
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
                     val tag = opts.dirTags[d] ?: "目录"
-                    val (fg, bg) = when (tag) { "仓库" -> p.accent to p.accentSoft; "工作树" -> p.info to p.infoSoft; "评测" -> p.warn to p.warnSoft; else -> p.ink3 to p.surface2 }
+                    val (fg, bg) = when (tag) { "仓库" -> p.accent to p.accentSoft; "工作树" -> p.info to p.infoSoft; else -> p.ink3 to p.surface2 }
                     Badge(tag, fg, bg)
                 }
             }

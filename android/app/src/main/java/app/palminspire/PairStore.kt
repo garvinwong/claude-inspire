@@ -60,7 +60,7 @@ object PairStore {
         null
     }
 
-    /** 旧办法（外部目录 pair.json，安卓 11 手表可用）：安卓 17 上 adb 写的文件 App 读不了，读不了就跳过。 */
+    /** 旧办法：读 App 外部目录里的 pair.json（较新安卓上 adb 写的文件 App 读不了，读不了就跳过）。 */
     fun importExternal(ctx: Context): Boolean = try {
         val f = File(ctx.getExternalFilesDir(null) ?: throw IllegalStateException(), "pair.json")
         if (!f.exists()) false else try { save(ctx, JSONObject(f.readText())); true } finally { runCatching { f.delete() } }

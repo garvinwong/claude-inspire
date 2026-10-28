@@ -13,7 +13,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'hub'))
-import mailbox  # noqa: E402
+import lanbox as mailbox  # noqa: E402
 import relay_link  # noqa: E402
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # noqa: E402
 from envelope import M2PC, PC2M, Opener, Sealer, derive  # noqa: E402
@@ -244,3 +244,23 @@ def test_stats_through_relay_fits_one_envelope(link):
     r = ph.ack(ph.cmd('stats', days=30))
     assert r['ok'] and r['ready'] and len(r['days']) == 30
     assert len(json.dumps(r, ensure_ascii=False).encode()) < relay_link.ENV_BUDGET
+
+
+def test_inbox_files_are_private(tmp_path):
+    """手机发来的照片、文件：收件目录 700、文件 600（多用户电脑上别人读不到）。"""
+    import stat
+    from types import SimpleNamespace
+    box = tmp_path / 'inbox'
+    p = relay_link.RelayLink.save_inbox(SimpleNamespace(inbox_dir=box), '照片.jpg', b'\xff\xd8x')
+    assert stat.S_IMODE(box.stat().st_mode) == 0o700 and stat.S_IMODE(p.stat().st_mode) == 0o600
+    assert p.read_bytes() == b'\xff\xd8x'
+
+
+def test_guard_fail_table_is_pruned():
+    """未鉴权的来源 IP 计错表不能被无限刷大：超过上限只留仍在锁定期的。"""
+    g = mailbox.Guard({'phone': ('client', 'a' * 64)}, clock=lambda: 1000.0)
+    for i in range(1100):
+        g.check(f'10.0.{i // 250}.{i % 250}', 'Bearer wrong')
+    g.check('10.9.9.9', 'Bearer wrong')
+    assert len(g.fails) <= 1025
+    assert mailbox.make_handler(g, mailbox.Mailbox({'phone': ('client', 'a' * 64)})).timeout == 60

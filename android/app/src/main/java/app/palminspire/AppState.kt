@@ -449,7 +449,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 会话级 YOLO：该会话的工具审批由灵动岛桥秒放行，选择题 / 计划照常问；与桌面岛 ⚡ 开关同一个。 */
+    /** 会话级 YOLO：该会话的工具审批由Agents Island 桥秒放行，选择题 / 计划照常问；与 Agents Island 桌面界面的 ⚡ 开关同一个。 */
     fun setYolo(sid: String, on: Boolean) {
         val l = link ?: return
         viewModelScope.launch {
@@ -595,7 +595,6 @@ class AppState(app: Application) : AndroidViewModel(app) {
             if (!r.optBoolean("ok")) {
                 toast = when (r.optString("reason")) {
                     "bad_cwd" -> "目录不在家目录下或不存在"
-                    "fable_not_allowed" -> "这个账号用不了 Fable"
                     "too_many_background" -> "后台会话已达上限（6 个）"
                     else -> "没建成：${r.optString("reason")}"
                 }

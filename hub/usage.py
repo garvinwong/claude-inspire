@@ -30,7 +30,7 @@ def _epoch(ts: str):
 
 
 def day_of(t: float) -> str:
-    return datetime.fromtimestamp(t).strftime('%Y-%m-%d')    # 本机时区（东京）
+    return datetime.fromtimestamp(t).strftime('%Y-%m-%d')    # 本机时区
 
 
 def _new_state(sid, account, sub):
@@ -145,7 +145,7 @@ def _split_by_day(spans, lo, hi):
 class UsageStats:
     def __init__(self, config_dirs, label, cache_path: Path):
         self.config_dirs = list(config_dirs)
-        self.label = label                           # config_dir → 账号名（主 / B / C）
+        self.label = label                           # config_dir → 账号名（单账号恒为 main）
         self.cache_path = Path(cache_path)
         self.files = {}
         self.lock = threading.Lock()
@@ -296,7 +296,7 @@ class UsageStats:
 
 
 class QuotaLog:
-    """额度走势：每 SAMPLE 秒记一次各账号 5h / 7d 用量（来自灵动岛缓存），存 cache/quota.jsonl，留 7 天。"""
+    """额度走势：每 SAMPLE 秒记一次各账号 5h / 7d 用量（来自状态栏缓存或手动刷新），存 cache/quota.jsonl，留 7 天。"""
     SAMPLE = 600
     KEEP = 7 * 86400
 

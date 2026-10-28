@@ -247,7 +247,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.PermBody(vm: AppState
                 if (a.danger) HoldButton("长按批准", Modifier.weight(1.4f), p.danger) { vm.decide(a, "allow"); onClose() }
                 else PrimaryButton("批准", Modifier.weight(1.4f), AppIcons.check, color = p.accent) { vm.decide(a, "allow"); onClose() }
             }
-            // 始终允许：常用（外出时一次对话要批好几次）——点一下即生效（与灵动岛 Always 一致）；
+            // 始终允许：常用（外出时一次对话要批好几次）——点一下即生效（与 Agents Island 的 Always 一致）；
             // 深橙字 + 橙描边 + 浅橙底，比原来的灰描边醒目。危险操作不给一键始终允许，仍要长按
             if (a.danger) HoldButton("长按 1 秒：本会话始终允许", Modifier.fillMaxWidth(), Brand.OrangeDeep, p.accentSoft) { vm.decide(a, "always"); onClose() }
             else Text("本会话始终允许", color = Brand.OrangeDeep, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,

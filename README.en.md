@@ -59,25 +59,27 @@ Take over the Claude Code sessions running on your computer from an Android phon
 2. **Get the code and dependencies**
    ```bash
    git clone https://github.com/garvinwong/claude-inspire.git ~/claude-inspire
-   pip install pyte qrcode
+   python3 -m pip install --user -r ~/claude-inspire/requirements.txt
    ```
+   Dependencies are `cryptography`, `pyte` and `qrcode`. Recent Debian/Ubuntu refuse `pip install` (PEP 668): add `--break-system-packages`, or use system packages (`sudo apt install python3-cryptography python3-pyte python3-qrcode`). The hub service runs with the system `/usr/bin/python3`, so install the dependencies for that interpreter, not only in a virtualenv.
 
 3. **Start `claude` through the host** — add this line to the end of `~/.bashrc`, then open a new terminal:
    ```bash
    source ~/claude-inspire/host/palm.sh
    ```
-   Only interactive launches are wrapped; `claude -p` and friends are untouched. Bypass once with `PALM_HOST=0 claude`.
+   It defines the `claude` wrapper and the `palm` command (both are shell functions, available only in shells that sourced this line). Only interactive launches are wrapped; `claude -p` and friends are untouched. Bypass once with `PALM_HOST=0 claude`. Tested in bash; zsh is supported by the code but untested.
 
 4. **Install the hub** (systemd user service)
    ```bash
    bash ~/claude-inspire/systemd/install.sh
    loginctl enable-linger $USER   # optional: keep running without a login session
    ```
-   Without systemd (e.g. macOS) just run `python3 ~/claude-inspire/hub/palm_hub.py`.
+   Without systemd (e.g. macOS), keep `python3 ~/claude-inspire/hub/palm_hub.py` running yourself, and restart that process wherever the steps below say `systemctl`.
 
 5. **Build and install the app**
    ```bash
    cd ~/claude-inspire/android
+   echo "sdk.dir=$HOME/Android/Sdk" > local.properties   # your Android SDK location (or set ANDROID_HOME)
    ./gradlew assembleRelease
    adb install -r app/build/outputs/apk/release/app-release.apk
    ```
@@ -96,9 +98,9 @@ Take over the Claude Code sessions running on your computer from an Android phon
 
 ### WSL users
 
-WSL2 uses NAT by default, so the phone cannot reach addresses inside WSL. Either:
-- set `networkingMode=mirrored` under `[wsl2]` in `%UserProfile%\.wslconfig`, then `wsl --shutdown`; or
-- install Tailscale inside WSL and pair with its address.
+WSL2 uses NAT by default, so the phone cannot reach addresses inside WSL (and `palm pair` will pick such an internal address). Either:
+- set `networkingMode=mirrored` under `[wsl2]` in `%UserProfile%\.wslconfig`, run `wsl --shutdown`, then pair with the computer's LAN address; or
+- install Tailscale inside WSL and pair with its address (100.x.x.x).
 
 ## Commands
 
@@ -106,22 +108,35 @@ WSL2 uses NAT by default, so the phone cannot reach addresses inside WSL. Either
 |---|---|
 | `palm` / `palm ls` | List sessions running through the host |
 | `palm attach <host-id>` | Attach this terminal to a background session (closing the window only detaches) |
-| `palm pair [--qr] [--host ADDR] [--rotate]` | Pair a phone; `--rotate` issues new tokens and key |
+| `palm pair [--qr] [--host ADDR] [--name NAME] [--adb SERIAL] [--rotate]` | Pair a phone; `--name` is the computer name shown on the phone; `--adb` sends the pairing link over adb; `--rotate` issues new tokens and key |
+| `palm hub` | Show the hub service status (systemd) |
 | `palm doctor` | Health check: host, hub, bridge, pairing |
 
-Environment variables: `PALM_LAN_BIND` / `PALM_LAN_PORT` (mailbox listen address, default `0.0.0.0:5613`), `PALM_BRIDGE_URL` (bridge, default `http://127.0.0.1:5599`), `PALM_TERMINAL` (terminal command for "open on computer", e.g. `gnome-terminal -- bash -lc {cmd}`), `PALM_INBOX_DIR` (where files sent from the phone are stored).
+Environment variables:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PALM_LAN_BIND` / `PALM_LAN_PORT` | `0.0.0.0` / `5613` | Mailbox listen address. Prefer your LAN or Tailscale address; don't let it listen on a public interface |
+| `PALM_HUB_PORT` | `5612` | Hub's local API port (127.0.0.1 only) |
+| `PALM_BRIDGE_URL` | `http://127.0.0.1:5599` | Agents Island bridge |
+| `PALM_HOME_DIR` | `~/.palm` | Pairing, tokens, caches, inbox |
+| `PALM_INBOX_DIR` | `~/.palm/inbox` | Files sent from the phone (owner-only, auto-deleted after 7 days) |
+| `PALM_RL_DIR` | `~/.agents-island` | Optional: quota cache written by the Agents Island status-line hook |
+| `PALM_TERMINAL` | auto | Terminal command for "open on computer", e.g. `gnome-terminal -- bash -lc {cmd}` |
+| `PALM_ADB` | `adb` | adb used by `palm pair --adb` |
 
 ## Security
 
-- Pairing tokens and the key are generated locally and kept in `~/.palm/` (mode 600). The mailbox stores only token hashes.
-- All messages and attachments between phone and computer are end-to-end encrypted (AES-GCM with replay-protected sequence numbers). The mailbox speaks plain HTTP but only sees ciphertext; someone on your LAN who captures a token can neither read nor forge messages.
-- Use it on trusted networks or over Tailscale. `palm pair --rotate` revokes old phones at any time.
+- Tokens and the key are generated locally: `~/.palm/pair-tokens.json` and `link.json` hold them in clear (mode 600, readable only by you); the mailbox's device table `mailbox.json` stores only token hashes.
+- All messages and attachments between phone and computer are end-to-end encrypted (AES-256-GCM with replay-protected sequence numbers and a time window). The mailbox speaks plain HTTP and cannot read content. Be aware, though: someone on the same network who captures a token can't read or forge messages, but *can* drain the phone's mailbox first (approvals then never arrive), delete pending attachments, and see when and how much is sent. **Use it only on trusted networks, and use Tailscale when away**; if anything looks off, run `palm pair --rotate`.
+- The hub's local API listens on 127.0.0.1 only and requires a token (`~/.palm/hub.token`). The mailbox listens on all interfaces by default — restrict it with `PALM_LAN_BIND` if the computer has a public address.
+- Files sent from the phone go to `~/.palm/inbox/` (directory 700, files 600) and are deleted after 7 days.
 - The phone cannot start sessions in `bypassPermissions` mode. YOLO mode applies only to the session you pick and can be turned off any time.
 - "Refresh usage" runs only when you tap it, at most once per 60 seconds. **Do not turn it into a scheduled job** — automated polling of subscription CLIs may get an account restricted.
 
 ## License
 
-[PolyForm Noncommercial 1.0.0](LICENSE.md): free for personal use, study, research and non-profit organizations. **Any commercial use (including use inside a company, redistribution, or bundling into a commercial product) requires a separate license from the author** — contact via [GitHub](https://github.com/garvinwong).
+[PolyForm Noncommercial 1.0.0](LICENSE.md): free for personal use, study and research, and for charitable, educational and government organizations. Non-commercial sharing and redistribution are allowed as long as the license and notice travel with it. **Any commercial use needs a separate license from the author** — including use inside a for-profit company, bundling into a commercial product or service, or paid distribution. Contact via [GitHub](https://github.com/garvinwong).
 
 Third-party components: see [THIRD_PARTY.md](THIRD_PARTY.md).
 

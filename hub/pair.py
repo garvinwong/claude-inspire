@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from mailbox import DEFAULT_PORT  # noqa: E402
+from lanbox import DEFAULT_PORT  # noqa: E402
 
 PKG = 'io.github.garvinwong.claudeinspire'
 PC_NAME, PHONE_NAME = 'palm-pc', 'phone'

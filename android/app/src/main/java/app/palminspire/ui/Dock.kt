@@ -109,7 +109,7 @@ fun TabHeader(title: String, sub: String = "", trailing: @Composable () -> Unit 
     }
 }
 
-/** 机器人状态：有事等你 → 等你；两个以上在跑 → 爆发；一个在跑 → 悬浮；都闲着 → 睡觉（与灵动岛同一套）。 */
+/** 机器人状态：有事等你 → 等你；两个以上在跑 → 爆发；一个在跑 → 悬浮；都闲着 → 睡觉（与 Agents Island 同一套）。 */
 fun botMood(vm: AppState): BotMood {
     val busy = vm.sessions.count { it.busy }
     return when {

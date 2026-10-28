@@ -1,12 +1,12 @@
 # 掌上灵感 · 启动包装
-# 启用：在 ~/.bashrc 末尾加一行（路径换成你克隆本仓库的位置）：
+# 启用：在 ~/.bashrc 或 ~/.zshrc 末尾加一行（路径换成你克隆本仓库的位置）：
 #   source ~/claude-inspire/host/palm.sh
 # 旁路：PALM_HOST=0 claude …    停用：删掉上面那一行，新开终端即可。
 #
 # 规则：只有“交互式（标准输入输出都是终端）且不是 -p / 子命令”时才经宿主启动；
 #       任何前提不满足（宿主脚本不在、没有 python3、已在宿主里）一律直接执行原命令（失败放行）。
 
-PALM_DIR="${PALM_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+PALM_DIR="${PALM_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%x}}")" && pwd)}"   # bash 用 BASH_SOURCE，zsh 用 %x
 
 _palm_should_wrap() {
   [[ "${PALM_HOST:-1}" == 0 ]] && return 1
@@ -61,6 +61,6 @@ PY
     pair) shift; python3 "$PALM_DIR/../hub/pair.py" "$@" ;;
     hub) systemctl --user --no-pager status palm-hub 2>&1 | head -5 ;;
     doctor) python3 "$PALM_DIR/../hub/doctor.py" ;;
-    *) echo "用法：palm ls | palm attach <宿主号> | palm pair [--adb 序列号] [--qr] [--rotate] | palm hub | palm doctor" ;;
+    *) echo "用法：palm ls | palm attach <宿主号> | palm pair [--qr] [--host 地址] [--name 电脑名] [--adb 序列号] [--rotate] | palm hub | palm doctor" ;;
   esac
 }

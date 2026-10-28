@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """掌上灵感 · 会话中枢 palm-hub
 
-本期（第 3 步）：会话发现与合并、会话事件、图片、注入与按键（经会话宿主）、审批转发（经灵动岛桥）。
-对外只开本机调试接口 127.0.0.1:5612；后续第 5 步再接公网中转（加密信封）。
+职责：会话发现与合并、会话事件、图片、注入与按键（经会话宿主）、审批转发（经 Agents Island 桥）。
+本机接口只听 127.0.0.1:5612；手机经内置的局域网信箱（lanbox.py，端到端加密信封）与中枢收发。
 
 为什么要令牌：WSL 的 127.0.0.1 端口会被转发到 Windows 一侧，不设令牌则 Windows 上任何程序都能往会话里注入命令。
 令牌在 ~/.palm/hub.token（权限 600，首次启动生成），请求头 X-Palm-Token。
 
 会话来源（三路合并，按会话号去重）：
-  1. 灵动岛桥 /api/state 的 claude 会话（在跑与历史，带记录文件路径）；
+  1. Agents Island 桥 /api/state 的 claude 会话（在跑与历史，带记录文件路径）；
   2. 宿主登记表 ~/.palm/run/*.json（可插话）；子进程号 → <账号目录>/sessions/<进程号>.json 得会话号；
   3. 桥不在时兜底：sessions/*.json 里进程还活着的会话。
 控制级别：host（经宿主，可插话）/ live（在跑，可看可审批）/ history（已结束，可续接，第 4 步）。
@@ -21,14 +21,14 @@
   GET  /api/pending                         Claude 的待审批与选择题
   POST /api/inject   {sid, text, force?, submit?}
   POST /api/keys     {sid, keys:[...]}
-  POST /api/decision {id, decision, reason?, answers?}   转发灵动岛桥（先应者赢）
+  POST /api/decision {id, decision, reason?, answers?}   转发Agents Island 桥（先应者赢）
   POST /api/inject 加 queue:true            电脑端正在输入时由中枢排队，输入框清空后自动发出（10 分钟过期）
                    加 clear:true            先清空电脑输入框里没发的字再发（电脑上 Ctrl+Y 可找回）；force:true 与草稿合并发出
   GET  /api/outbox                          排队中的消息及状态；POST /api/outbox/cancel {qid}
   POST /api/outbox/flush {qid, mode}        排队的这条马上发：mode=clear 先清空电脑草稿 / force 与草稿合并
   POST /api/keep_alive {sid, on}            关终端也不结束该会话
   POST /api/close {sid}                     关闭经宿主跑的会话（记录保留）
-  POST /api/yolo {sid, on}                  会话级 YOLO（经灵动岛桥）
+  POST /api/yolo {sid, on}                  会话级 YOLO（经Agents Island 桥）
   POST /api/usage/refresh {}                手动刷新使用率（无头探一次，60 秒限一次）
   POST /api/resume {sid, fork?}             续接历史会话（查活性）
   POST /api/new {cwd, model?, effort?, permission_mode?, prompt?}   新建会话（后台宿主）
@@ -38,7 +38,7 @@
   GET  /api/commands?sid=                   斜杠命令面板：内置 + 技能 + 自定义命令（complete.py）
   GET  /api/files?sid=&q=                   @ 文件补全：会话目录内的相对路径（只读，不读内容）
   POST /api/open_on_pc {sid}               在电脑上弹 Windows Terminal 执行 palm attach 接上该会话（仅经宿主的会话）
-  GET  /api/link                            中转链路状态（palm doctor 用）：最近取件距今秒数、收发计数
+  GET  /api/link                            信箱链路状态（palm doctor 用）：最近取件距今秒数、收发计数
   GET  /api/stats?days=1|7|30               仪表盘：token / 工作时长 / 工具 / 会话排行 + 额度走势（usage.py）
 """
 import argparse
@@ -83,7 +83,7 @@ QUEUE_TTL = 600.0          # 排队消息过期
 QUEUE_RETRY = 1.5
 NEW_MODES = ('default', 'acceptEdits', 'plan', 'auto', 'dontAsk')   # 手机不许开 bypassPermissions
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')                  # claude --effort 的取值（v2.1.310 --help）
-RL_DIR = Path(os.environ.get('PALM_RL_DIR') or '~/.agents-island').expanduser()   # 可选：灵动岛状态栏钩子缓存的额度
+RL_DIR = Path(os.environ.get('PALM_RL_DIR') or '~/.agents-island').expanduser()   # 可选：Agents Island 状态栏钩子缓存的额度
 RL_FILE = 'rl.json'
 ACCOUNT = 'main'           # 单账号；接口仍带 account 字段，留作以后扩展
 PC_ACTIVE_SECONDS = 120    # 宿主这么久内有本机按键 = 人在电脑前
@@ -110,12 +110,10 @@ def account_label(config_dir: str) -> str:
 
 
 def dir_tag(path: str) -> str:
-    """新建页目录类型标签：工作树（~/wt/ 下）、评测（evalrun）、仓库（有 .git）、目录。"""
-    home = str(Path.home())
-    if path.startswith(os.path.join(home, 'wt') + os.sep):
+    """新建页目录类型标签：git 工作树（.git 是文件）、仓库（.git 是目录）、目录。"""
+    g = os.path.join(path, '.git')
+    if os.path.isfile(g):
         return '工作树'
-    if 'evalrun' in Path(path).parts:
-        return '评测'
     return '仓库' if os.path.exists(os.path.join(path, '.git')) else '目录'
 
 
@@ -213,7 +211,7 @@ class Hub:
         self._launch = {}                              # 记录文件 → 启动目录
         self._closing = {}                             # 宿主号 → 叫关时间
         self._probes = {}                              # 账号 → 刷新使用率的状态 {running, at, error}
-        self.link = None                               # 外连中转（main 里有配对配置才建）
+        self.link = None                               # 连信箱（main 里有配对配置才建）
         self.stats_db = UsageStats(self.config_dirs, account_label, self.home / 'cache' / 'usage.json')
         self.quota_log = QuotaLog(self.home / 'cache' / 'quota.jsonl')
         self._stats_thread = None
@@ -344,7 +342,7 @@ class Hub:
         for r in out:                                   # 在跑的会话带模型与思考程度（只在记录增长时重读）
             if r['control'] != 'history' and not r['sid'].startswith('host:'):
                 r.update(self.meta.get(self.transcript_path(r)))
-        yolo = set((st or {}).get('yolo_sessions') or [])     # 灵动岛桥的会话级 YOLO（手机长按面板与桌面岛同一开关）
+        yolo = set((st or {}).get('yolo_sessions') or [])     # Agents Island 桥的会话级 YOLO（手机长按面板与桌面岛同一开关）
         for r in out:
             r['yolo'] = r['sid'] in yolo
         order = {'host': 0, 'live': 1, 'history': 2}
@@ -422,7 +420,7 @@ class Hub:
 
     def usage(self) -> dict:
         """各账号 5 小时 / 7 天额度；at = 数据时间，太旧的由手机标灰。来源两份取较新的：
-        灵动岛状态栏钩子写的缓存（该账号有会话刷状态栏时才写），与手机“刷新使用率”无头探一次的结果（中枢自己的缓存）。"""
+        Agents Island状态栏钩子写的缓存（该账号有会话刷状态栏时才写），与手机“刷新使用率”无头探一次的结果（中枢自己的缓存）。"""
         out = {}
         for acct, name in ((ACCOUNT, RL_FILE),):
             cands = []
@@ -902,7 +900,7 @@ class Hub:
         return {'ok': True, 'items': self.file_index.search(row.get('cwd') or '', str(q or '')[:100])}
 
     def yolo(self, sid: str, on: bool) -> dict:
-        """会话级 YOLO：交给灵动岛桥——它对该会话的工具审批秒放行，选择题 / 计划照常问。"""
+        """会话级 YOLO：交给Agents Island 桥——它对该会话的工具审批秒放行，选择题 / 计划照常问。"""
         if not self.find(sid):
             return {'ok': False, 'reason': 'no_session'}
         req = urllib.request.Request(f'{self.bridge}/api/session_yolo', data=json.dumps({'session_id': sid, 'on': bool(on)}).encode(),
@@ -1053,7 +1051,7 @@ def main():
     print(f'palm-hub {VERSION} 监听 127.0.0.1:{args.port}', flush=True)
     devices = hub.home / 'mailbox.json'
     if devices.exists():                             # 已配对：起局域网信箱，中枢自己也经它和手机收发
-        import mailbox
+        import lanbox as mailbox
         bind = os.environ.get('PALM_LAN_BIND') or '0.0.0.0'
         port = int(os.environ.get('PALM_LAN_PORT') or mailbox.DEFAULT_PORT)
         msrv, _ = mailbox.make_server(bind, port, devices, hub.home / 'mailbox-blobs')

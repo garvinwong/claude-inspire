@@ -1,6 +1,6 @@
-"""掌上灵感 · 中枢外连中转
+"""掌上灵感 · 中枢连信箱
 
-电脑主动外连公网中转的 v2 信箱，与手机之间只走加密信封（envelope.py）。中转只看见设备、类型、大小、时间。
+电脑主动外连局域网信箱（lanbox.py，同一套 v2 接口），与手机之间只走加密信封（envelope.py）。信箱只看见设备、类型、大小、时间。
 
 手机 → 电脑（L5 命令，明文 {id, op, args}），电脑回 ack {ref, ok, data | reason}：
   sessions{scope} / events{sid,tail|since|before}（回 L4，可分片）/ image{id}（回 L6 附件元数据）/ screen{sid}
@@ -31,7 +31,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from envelope import M2PC, PC2M, EnvelopeError, Opener, Sealer, derive
 
 PART = 96 * 1024
-ENV_BUDGET = 40 * 1024          # 单个信封明文预算：加密后 Base64 膨胀 4/3，中转上限 64 KB（48 KB 会超，真机实测）
+ENV_BUDGET = 40 * 1024          # 单个信封明文预算：加密后 Base64 膨胀 4/3，信箱上限 64 KB（48 KB 会超，真机实测）
 FILE_MAX = 20 * 1024 * 1024
 PEER_ONLINE = 40                # 手机多少秒内取过件算在线
 WATCH_TTL = 120.0
@@ -136,7 +136,8 @@ class RelayLink:
         return data
 
     def save_inbox(self, name: str, data: bytes) -> Path:
-        self.inbox_dir.mkdir(parents=True, exist_ok=True)
+        self.inbox_dir.mkdir(mode=0o700, parents=True, exist_ok=True)   # 手机发来的照片、文件：只给本人看
+        os.chmod(self.inbox_dir, 0o700)
         cutoff = time.time() - INBOX_KEEP_DAYS * 86400          # 7 天自动清
         for f in self.inbox_dir.iterdir():
             try:
@@ -145,7 +146,9 @@ class RelayLink:
             except OSError:
                 pass
         path = self.inbox_dir / f"{time.strftime('%Y%m%d-%H%M%S')}-{os.urandom(2).hex()}-{safe_name(name)}"
-        path.write_bytes(data)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, 'wb') as f:
+            f.write(data)
         return path
 
     # 命令 --------------------------------------------------------------
@@ -267,7 +270,7 @@ class RelayLink:
             self.poll_started = None
         self.last_poll = time.time()
         if r.get('boot') != self.boot:
-            if self.boot is not None and self.since:  # 中转重启过：序号从头
+            if self.boot is not None and self.since:  # 信箱重启过：序号从头
                 self.since = 0
             self.boot = r.get('boot')
         for it in r.get('items') or []:

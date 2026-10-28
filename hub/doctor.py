@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """掌上灵感 · 体检 palm doctor
 
-逐项检查：启动包装、会话中枢、灵动岛桥、中转与手机、终端视图依赖、附件收件目录、后台会话数。
+逐项检查：启动包装、会话中枢、Agents Island 桥、信箱与手机、终端视图依赖、附件收件目录、后台会话数。
 只读：不改任何配置、不重启任何服务；每项给出“通过 / 注意 / 失败”和处理办法。退出码：有失败为 1。
 """
 import base64
@@ -60,13 +60,13 @@ def check_bridge(url: str) -> tuple:
     try:
         st = _get(f'{url}/api/state')
         n = len((st.get('sessions') or {}).get('claude') or [])
-        return OK, '灵动岛桥', f'{url} 在线，{n} 个 Claude 会话'
+        return OK, 'Agents Island 桥', f'{url} 在线，{n} 个 Claude 会话'
     except (OSError, ValueError, urllib.error.URLError) as e:
-        return FAIL, '灵动岛桥', f'{url} 连不上（{e}）：会话总览只剩兜底、审批收不到；先查灵动岛'
+        return FAIL, 'Agents Island 桥', f'{url} 连不上（{e}）：会话总览只剩兜底、审批收不到；先查 Agents Island 桥是否在跑（bash launch/start_bridge.sh）'
 
 
 def check_relay(palm_home: Path, port: int) -> list:
-    """配对配置 + 中枢的链路状态（/api/link）+ 中转那边看到的手机最近取件时间。"""
+    """配对配置 + 中枢的链路状态（/api/link）+ 信箱那边看到的手机最近取件时间。"""
     p = palm_home / 'link.json'
     if not p.is_file():
         return [(WARN, '手机配对', '没有 ~/.palm/link.json：还没配对，运行 palm pair --adb <序列号> 或 palm pair --qr')]
@@ -90,25 +90,25 @@ def check_relay(palm_home: Path, port: int) -> list:
     age, flying = st.get('poll_age'), st.get('in_flight')
     alive = (age is not None and age <= 60) or (flying is not None and flying <= 40)   # 长轮询最长 25 秒 + 余量
     if 'error' in st:
-        out.append((FAIL, '中转链路', f"问不到中枢的链路状态（{st['error']}）"))
+        out.append((FAIL, '信箱链路', f"问不到中枢的链路状态（{st['error']}）"))
     elif not st.get('paired'):
-        out.append((FAIL, '中转链路', '中枢没读到配对配置：配对后要 systemctl --user restart palm-hub'))
+        out.append((FAIL, '信箱链路', '中枢没读到配对配置：配对后要 systemctl --user restart palm-hub'))
     elif not alive:
-        out.append((FAIL, '中转链路', f"中枢 {'从未' if age is None else f'{age} 秒前才'}成功取件：{st.get('url')} 连不上或令牌失效，看中枢日志"))
+        out.append((FAIL, '信箱链路', f"中枢 {'从未' if age is None else f'{age} 秒前才'}成功取件：{st.get('url')} 连不上或令牌失效，看中枢日志"))
     else:
         when = f'{age} 秒前取过件' if age is not None else f'长连接中（{flying} 秒）'
-        out.append((OK, '中转链路', f"{st.get('url')} 在线，中枢{when}（收 {st.get('in', 0)}、发 {st.get('out', 0)}、丢弃 {st.get('bad', 0)}）"))
+        out.append((OK, '信箱链路', f"{st.get('url')} 在线，中枢{when}（收 {st.get('in', 0)}、发 {st.get('out', 0)}、丢弃 {st.get('bad', 0)}）"))
     try:
         peer = (_get(cfg['relay_url'].rstrip('/') + '/v2/peers', {'Authorization': f"Bearer {cfg['token']}"}, timeout=8)
                 .get('peers') or {}).get(cfg.get('peer', 'phone'))
     except urllib.error.HTTPError as e:
-        out.append((FAIL, '手机', f"中转回 {e.code}：本机令牌被吊销或中转配置变了，palm pair --rotate"))
+        out.append((FAIL, '手机', f"信箱回 {e.code}：本机令牌被吊销或信箱配置变了，palm pair --rotate"))
         return out
     except (OSError, ValueError, urllib.error.URLError) as e:
-        out.append((WARN, '手机', f'问不到中转（{e}）'))
+        out.append((WARN, '手机', f'问不到信箱（{e}）'))
         return out
     if peer is None:
-        out.append((WARN, '手机', '中转没见过手机取件：在手机上打开掌上灵感'))
+        out.append((WARN, '手机', '信箱没见过手机取件：在手机上打开掌上灵感'))
     else:
         mins = peer // 60
         when = f'{peer} 秒前' if peer < 120 else (f'{mins} 分钟前' if mins < 120 else f'{mins // 60} 小时前')

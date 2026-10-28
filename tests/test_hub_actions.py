@@ -212,17 +212,17 @@ def test_history_row_without_config_dir_uses_transcript_path(env):  # noqa: F811
 
 
 def test_new_options_tags_directories(env, tmp_path, monkeypatch):  # noqa: F811
-    """新建页目录带类型标签：工作树 / 评测 / 仓库 / 目录。"""
+    """新建页目录带类型标签：git 工作树（.git 是文件）/ 仓库（.git 是目录）/ 目录。"""
     monkeypatch.setenv('HOME', str(tmp_path))
-    repo, wt, ev, plain = tmp_path / 'myrepo', tmp_path / 'wt' / 'x', tmp_path / 'evalrun' / 'k1', tmp_path / 'notes'
-    for d in (repo / '.git', wt, ev, plain):
+    repo, wt, plain = tmp_path / 'myrepo', tmp_path / 'trees' / 'x', tmp_path / 'notes'
+    for d in (repo / '.git', wt, plain):
         d.mkdir(parents=True)
     (wt / '.git').write_text('gitdir: /somewhere')
-    for d in (repo, wt, ev, plain):
+    for d in (repo, wt, plain):
         add_row(env, cwd=str(d), age_seconds=1)
     monkeypatch.setenv('PALM_DEFAULT_DIR', str(repo))
     _, r = call(env['base'], '/api/new_options', env['tok'])
-    assert r['dir_tags'] == {str(repo): '仓库', str(wt): '工作树', str(ev): '评测', str(plain): '目录'}
+    assert r['dir_tags'] == {str(repo): '仓库', str(wt): '工作树', str(plain): '目录'}
 
 
 def test_clear_falls_back_for_old_host(env, monkeypatch):  # noqa: F811

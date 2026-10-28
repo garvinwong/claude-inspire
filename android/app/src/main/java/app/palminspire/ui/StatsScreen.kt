@@ -245,7 +245,7 @@ private fun weekday(date: String): String = runCatching {
     "一二三四五六日"[LocalDate.parse(date).dayOfWeek.value - 1].let { "周$it" }
 }.getOrDefault("")
 
-/** 每日 token：按账号叠柱（主 / B / C 固定颜色与顺序），点一根柱看当天明细；默认选中最近一天。 */
+/** 每日 token：按账号叠柱（单账号即一种颜色），点一根柱看当天明细；默认选中最近一天。 */
 @Composable
 private fun DailyCard(days: List<StatDay>) {
     val p = LocalPalm.current

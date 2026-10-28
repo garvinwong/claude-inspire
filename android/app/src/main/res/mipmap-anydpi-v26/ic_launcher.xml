@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 启动图标：Claude 橙底 + 吉祥物 C 案 logo（10-27 起；原为灵动岛像素机器人，灵动岛自身不变） -->
+<!-- 启动图标：Claude 橙底 + 吉祥物 logo -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/palm_orange" />
     <foreground android:drawable="@drawable/ic_launcher_fg" />

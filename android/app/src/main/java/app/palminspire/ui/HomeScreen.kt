@@ -224,7 +224,7 @@ fun ApprovalRow(a: Approval, modifier: Modifier = Modifier, onClick: () -> Unit)
  * 会话卡。长按 = 底部升起操作面板（在电脑上打开、关闭会话等原来藏在会话页右上角）：震一下、卡片先压后弹。
  * 在跑 vs 等你（评审结论：静态区分 + 只留一处局部动效）：
  * - 在跑：固定的淡暖底 + 细橙边（一眼区分，不动）；“正在…”这一行一道暖白微光左→右掠过 + 句末 2dp 细光标呼吸
- *   （Gemini 方案；codex 的行首呼吸圆点也做过，真机对比后留微光）；
+ *   （真机对比过行首呼吸圆点，留微光）；
  * - 等你批：琥珀描边整圈脉冲（脉冲只留给要你动手的）；
  * - 空闲：静止。系统关了动画时一律静止（暖底、细边、实色点照旧在）。
  */
@@ -288,7 +288,7 @@ private fun SessionCard(s: SessionRow, pendingCount: Int, modifier: Modifier = M
                                 .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
                                 .drawWithContent {
                                     drawContent()
-                                    // Gemini 方案：暖白微光带（行宽 35%）左→右掠过文字，2.2 秒一轮、前 1.8 秒扫、后 0.4 秒歇；只染在字上（SrcAtop）
+                                    // 暖白微光带（行宽 35%）左→右掠过文字，2.2 秒一轮、前 1.8 秒扫、后 0.4 秒歇；只染在字上（SrcAtop）
                                     val k = (sweep.value / 0.82f).coerceAtMost(1.0001f)
                                     if (k <= 1f) {
                                         val band = size.width * 0.35f

@@ -1,4 +1,4 @@
-"""palm doctor 体检测试：全通过、各项故障能被认出来（中枢 / 桥 / 中转 / 配对 / 权限），只读不改东西。"""
+"""palm doctor 体检测试：全通过、各项故障能被认出来（中枢 / 桥 / 信箱 / 配对 / 权限），只读不改东西。"""
 import base64
 import json
 import os
@@ -16,7 +16,7 @@ PALM_DIR = Path(__file__).resolve().parents[1]
 
 
 class Fake:
-    """一个端口同时扮中枢（/api/health、/api/link）、灵动岛桥（/api/state）、中转（/v2/peers）。"""
+    """一个端口同时扮中枢（/api/health、/api/link）、Agents Island 桥（/api/state）、信箱（/v2/peers）。"""
 
     def __init__(self):
         self.link = {'ok': True, 'paired': True, 'url': 'http://relay', 'poll_age': 3, 'in': 5, 'out': 9, 'bad': 0}
@@ -74,7 +74,7 @@ def test_all_pass(setup):
     fake, kw, _ = setup
     rows = doctor.run(**kw)
     assert all(level == doctor.OK for level, _, _ in rows), rows
-    assert {'启动包装', '中枢接口', '灵动岛桥', '手机配对', '中转链路', '手机', '附件收件', '经宿主的会话'} <= set(levels(rows))
+    assert {'启动包装', '中枢接口', 'Agents Island 桥', '手机配对', '信箱链路', '手机', '附件收件', '经宿主的会话'} <= set(levels(rows))
 
 
 def test_detects_failures(setup, tmp_path):
@@ -84,22 +84,22 @@ def test_detects_failures(setup, tmp_path):
     fake.peers_code = 401                                        # 本机令牌被吊销
     (palm / 'link.json').chmod(0o644)
     lv = levels(doctor.run(**dict(kw, bridge='http://127.0.0.1:9')))
-    assert lv['启动包装'] == doctor.WARN and lv['灵动岛桥'] == doctor.FAIL
-    assert lv['中转链路'] == doctor.FAIL and lv['手机'] == doctor.FAIL and lv['手机配对'] == doctor.WARN
+    assert lv['启动包装'] == doctor.WARN and lv['Agents Island 桥'] == doctor.FAIL
+    assert lv['信箱链路'] == doctor.FAIL and lv['手机'] == doctor.FAIL and lv['手机配对'] == doctor.WARN
 
 
 def test_hub_down_and_unpaired(setup):
     fake, kw, palm = setup
     (palm / 'link.json').rename(palm / 'link.json.bak')
     lv = levels(doctor.run(**dict(kw, port=9)))
-    assert lv['中枢接口'] == doctor.FAIL and lv['手机配对'] == doctor.WARN and '中转链路' not in lv
+    assert lv['中枢接口'] == doctor.FAIL and lv['手机配对'] == doctor.WARN and '信箱链路' not in lv
 
 
 def test_old_hub_without_link_api_is_flagged(setup):
     fake, kw, _ = setup
     fake.link = None                                             # 旧版中枢没有 /api/link → 回 null
     lv = levels(doctor.run(**kw))
-    assert lv['中转链路'] == doctor.FAIL
+    assert lv['信箱链路'] == doctor.FAIL
 
 
 def test_background_hosts_counted(setup):
@@ -117,8 +117,8 @@ def test_long_poll_in_flight_counts_as_alive(setup):
     """10-26 实测：中枢刚重启时第一次长轮询（最长 25 秒）还没返回，poll_age 为空，被误报“从未成功取件”。"""
     fake, kw, _ = setup
     fake.link.update(poll_age=None, in_flight=3)
-    assert levels(doctor.run(**kw))['中转链路'] == doctor.OK
+    assert levels(doctor.run(**kw))['信箱链路'] == doctor.OK
     fake.link.update(poll_age=None, in_flight=None)              # 真连不上：没有在途请求、也没成功过
-    assert levels(doctor.run(**kw))['中转链路'] == doctor.FAIL
+    assert levels(doctor.run(**kw))['信箱链路'] == doctor.FAIL
     fake.link.update(poll_age=None, in_flight=90)                # 在途请求挂住超时
-    assert levels(doctor.run(**kw))['中转链路'] == doctor.FAIL
+    assert levels(doctor.run(**kw))['信箱链路'] == doctor.FAIL
