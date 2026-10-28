@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 启动图标前景：吉祥物 C 案 logo（圆角屏框 + 点阵 >_）；点阵由 BotSpec 同一份 5×7 字表生成 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- 屏框：白色圆角矩形描边，落在 66 安全区内 -->
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:fillColor="#00000000"
+        android:pathData="M37,35 h34 a8,8 0 0 1 8,8 v24 a8,8 0 0 1 -8,8 h-34 a8,8 0 0 1 -8,-8 v-24 a8,8 0 0 1 8,-8 z" />
+    <!-- 点阵提示符 >_ -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M37.5,44.5h2.6v2.6h-2.6zM40.5,44.5h2.6v2.6h-2.6zM40.5,47.5h2.6v2.6h-2.6zM43.5,47.5h2.6v2.6h-2.6zM43.5,50.5h2.6v2.6h-2.6zM46.5,50.5h2.6v2.6h-2.6zM46.5,53.5h2.6v2.6h-2.6zM49.5,53.5h2.6v2.6h-2.6zM43.5,56.5h2.6v2.6h-2.6zM46.5,56.5h2.6v2.6h-2.6zM40.5,59.5h2.6v2.6h-2.6zM43.5,59.5h2.6v2.6h-2.6zM37.5,62.5h2.6v2.6h-2.6zM40.5,62.5h2.6v2.6h-2.6zM55.5,62.5h2.6v2.6h-2.6zM58.5,62.5h2.6v2.6h-2.6zM61.5,62.5h2.6v2.6h-2.6zM64.5,62.5h2.6v2.6h-2.6zM67.5,62.5h2.6v2.6h-2.6z" />
+</vector>

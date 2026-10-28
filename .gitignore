@@ -1,0 +1,15 @@
+# 构建产物
+android/**/build/
+android/.gradle/
+android/.kotlin/
+android/local.properties
+*.apk
+*.aab
+# 签名密钥（绝不入库）
+*.jks
+*.keystore
+keystore.properties
+# Python
+__pycache__/
+.pytest_cache/
+*.pyc

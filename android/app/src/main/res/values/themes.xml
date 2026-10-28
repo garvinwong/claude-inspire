@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 窗口底色跟随系统明暗，Compose 内容自己画；启动时不闪白 -->
+    <style name="Theme.Palm" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/palm_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

@@ -1,0 +1,19 @@
+# Claude Inspire hub (systemd --user). Install with: bash systemd/install.sh
+# @REPO@ is replaced with the repository path by install.sh.
+[Unit]
+Description=Claude Inspire hub (phone <-> Claude Code sessions)
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 @REPO@/hub/palm_hub.py
+Restart=on-failure
+RestartSec=5
+# Restarting the hub must not kill the background sessions it started
+KillMode=process
+# claude is usually installed in ~/.local/bin
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

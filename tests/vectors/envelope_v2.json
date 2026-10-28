@@ -1,0 +1,17 @@
+{
+ "pair_key_b64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+ "info": "palm v2 m->pc",
+ "salt": "palm-inspire",
+ "derived_key_b64": "QvkNdjxEG8ce/O6sDXHl7MLVm1YD9MhOJJ4lbEhWVgU=",
+ "aad": "2|phone|L5|1800000000000000|1800000000",
+ "plaintext": "{\"op\": \"send_text\", \"text\": \"你好\"}",
+ "envelope": {
+  "v": 2,
+  "dev": "phone",
+  "kind": "L5",
+  "seq": 1800000000000000,
+  "ts": 1800000000,
+  "n": "BwcHBwcHBwcHBwcH",
+  "ct": "/wFVLizj5DmCJG/uwFYi6yWARBVk8B1W8zSN3ssmnrPDvUjBqUw4ErsrzGtYWA9Uexw3RZ8="
+ }
+}
